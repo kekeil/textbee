@@ -1,5 +1,4 @@
 services:
-  # MongoDB service
   textbee-db:
     container_name: textbee-db
     image: mongo:latest
@@ -9,10 +8,7 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=${MONGO_ROOT_PASS:-adminPassword}
       - MONGO_INITDB_DATABASE=textbee
     volumes:
-      # - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
       - mongodb_data:/data/db
-    ports:
-      - "${MONGO_PORT:-27018}:27017"
     networks:
       - textbee-network
     healthcheck:
@@ -22,13 +18,10 @@ services:
       retries: 3
       start_period: 20s
 
-  # MongoDB Express (optional admin UI)
   mongo-express:
     container_name: textbee-mongo-express
     image: mongo-express:latest
     restart: always
-    ports:
-      - "${MONGO_EXPRESS_PORT:-8081}:8081"
     environment:
       - ME_CONFIG_MONGODB_ADMINUSERNAME=${MONGO_ROOT_USER:-adminUser}
       - ME_CONFIG_MONGODB_ADMINPASSWORD=${MONGO_ROOT_PASS:-adminPassword}
@@ -39,56 +32,83 @@ services:
     networks:
       - textbee-network
 
-  # NestJS API
   textbee-api:
     container_name: textbee-api
-    # image: ghcr.io/vernu/textbee/api:latest
     build:
       context: ./api
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "${PORT:-3001}:3001"
-    env_file:
-      - ./api/.env
+      - "3001:3001"
     environment:
-      - PORT=${PORT:-3001}
-      - REDIS_URL=${REDIS_URL:-redis://textbee-redis:6379}
-
+      - PORT=3001
+      - MONGO_URI=${MONGO_URI}
+      - MONGO_ROOT_USER=${MONGO_ROOT_USER}
+      - MONGO_ROOT_PASS=${MONGO_ROOT_PASS}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRATION=${JWT_EXPIRATION}
+      - FRONTEND_URL=${FRONTEND_URL}
+      - REDIS_URL=${REDIS_URL}
+      - USE_SMS_QUEUE=${USE_SMS_QUEUE}
+      - WEBHOOK_DELIVERY_TIMEOUT_MS=${WEBHOOK_DELIVERY_TIMEOUT_MS}
+      - WEBHOOK_AUTO_DISABLE_FAILURE_THRESHOLD=${WEBHOOK_AUTO_DISABLE_FAILURE_THRESHOLD}
+      - WEBHOOK_AUTO_DISABLE_LOOKBACK_DAYS=${WEBHOOK_AUTO_DISABLE_LOOKBACK_DAYS}
+      - WEBHOOK_AUTO_DISABLE_MIN_FAILURE_RATE=${WEBHOOK_AUTO_DISABLE_MIN_FAILURE_RATE}
+      - CLOUDFLARE_TURNSTILE_SECRET_KEY=${CLOUDFLARE_TURNSTILE_SECRET_KEY}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_PRIVATE_KEY_ID=${FIREBASE_PRIVATE_KEY_ID}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_CLIENT_ID=${FIREBASE_CLIENT_ID}
+      - FIREBASE_CLIENT_C509_CERT_URL=${FIREBASE_CLIENT_C509_CERT_URL}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASS=${MAIL_PASS}
+      - MAIL_FROM=${MAIL_FROM}
+      - MAIL_REPLY_TO=${MAIL_REPLY_TO}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
     depends_on:
       textbee-db:
+        condition: service_healthy
+      textbee-redis:
         condition: service_healthy
     networks:
       - textbee-network
 
-  # Next.js Web
   textbee-web:
     container_name: textbee-web
-    # image: ghcr.io/vernu/textbee/web:latest
     build:
       context: ./web
       dockerfile: Dockerfile
     restart: always
     ports:
-      - "${PORT:-3000}:3000"
-    env_file:
-      - ./web/.env
+      - "3000:3000"
     environment:
-      - PORT=${PORT:-3000}
-      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL:-http://localhost:3001/api/v1}
-
+      - PORT=3000
+      - NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
+      - NEXT_PUBLIC_API_BASE_URL=${NEXT_PUBLIC_API_BASE_URL}
+      - NEXT_PUBLIC_LATEST_APP_VERSION_CODE=${NEXT_PUBLIC_LATEST_APP_VERSION_CODE}
+      - NEXT_PUBLIC_GOOGLE_CLIENT_ID=${NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+      - NEXT_PUBLIC_TAWKTO_EMBED_URL=${NEXT_PUBLIC_TAWKTO_EMBED_URL}
+      - NEXT_PUBLIC_TURNSTILE_SITE_KEY=${NEXT_PUBLIC_TURNSTILE_SITE_KEY}
+      - AUTH_SECRET=${AUTH_SECRET}
+      - DATABASE_URL=${DATABASE_URL}
+      - MAIL_HOST=${MAIL_HOST}
+      - MAIL_PORT=${MAIL_PORT}
+      - MAIL_USER=${MAIL_USER}
+      - MAIL_PASS=${MAIL_PASS}
+      - MAIL_FROM=${MAIL_FROM}
+      - ADMIN_EMAIL=${ADMIN_EMAIL}
     depends_on:
       - textbee-api
     networks:
       - textbee-network
 
-  # Redis (if SMS queue is needed)
   textbee-redis:
     container_name: textbee-redis
     image: redis:alpine
     restart: always
-    ports:
-      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -107,4 +127,4 @@ networks:
 
 volumes:
   mongodb_data:
-  redis_data: 
+  redis_data:
