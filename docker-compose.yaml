@@ -73,12 +73,6 @@ services:
         condition: service_healthy
     networks:
       - textbee-network
-    healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/', (r) => process.exit(0)).on('error', () => process.exit(1));\""]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   textbee-web:
     container_name: textbee-web
@@ -103,16 +97,9 @@ services:
       - MAIL_FROM=${MAIL_FROM}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
     depends_on:
-      textbee-api:
-        condition: service_healthy
+      - textbee-api
     networks:
       - textbee-network
-    healthcheck:
-      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/', (r) => process.exit(0)).on('error', () => process.exit(1));\""]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 20s
 
   textbee-redis:
     container_name: textbee-redis
