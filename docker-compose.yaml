@@ -74,7 +74,7 @@ services:
     networks:
       - textbee-network
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3001 || exit 1"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3001/', (r) => process.exit(0)).on('error', () => process.exit(1));\""]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -108,7 +108,7 @@ services:
     networks:
       - textbee-network
     healthcheck:
-      test: ["CMD-SHELL", "nc -z localhost 3000 || exit 1"]
+      test: ["CMD-SHELL", "node -e \"require('http').get('http://localhost:3000/', (r) => process.exit(0)).on('error', () => process.exit(1));\""]
       interval: 30s
       timeout: 10s
       retries: 3
