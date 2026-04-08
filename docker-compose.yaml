@@ -73,6 +73,12 @@ services:
         condition: service_healthy
     networks:
       - textbee-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3001/api/v1 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   textbee-web:
     container_name: textbee-web
@@ -97,9 +103,16 @@ services:
       - MAIL_FROM=${MAIL_FROM}
       - ADMIN_EMAIL=${ADMIN_EMAIL}
     depends_on:
-      - textbee-api
+      textbee-api:
+        condition: service_healthy
     networks:
       - textbee-network
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 15s
 
   textbee-redis:
     container_name: textbee-redis
