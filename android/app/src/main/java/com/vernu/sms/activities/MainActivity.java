@@ -2,11 +2,14 @@ package com.vernu.sms.activities;
 
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.SwitchCompat;
 import androidx.core.app.ActivityCompat;
+import android.content.BroadcastReceiver;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import com.vernu.sms.activities.SMSFilterActivity;
 import android.os.Build;
 import android.os.Bundle;
@@ -36,6 +39,7 @@ import com.vernu.sms.R;
 import com.vernu.sms.dtos.RegisterDeviceInputDTO;
 import com.vernu.sms.dtos.RegisterDeviceResponseDTO;
 import com.vernu.sms.dtos.SimInfoCollectionDTO;
+import com.vernu.sms.helpers.BundleManager;
 import com.vernu.sms.helpers.SharedPreferenceHelper;
 import com.vernu.sms.helpers.VersionTracker;
 import com.vernu.sms.helpers.HeartbeatManager;
@@ -58,6 +62,13 @@ public class MainActivity extends AppCompatActivity {
     private ImageButton copyDeviceIdImgBtn;
     private TextView deviceBrandAndModelTxt, deviceIdTxt, appVersionNameTxt, appVersionCodeTxt;
     private RadioGroup defaultSimSlotRadioGroup;
+    private SwitchCompat bundleEnabledSwitch;
+    private EditText bundleCapacityEditText, bundleUssdCodeEditText;
+    private TextView bundleRemainingTxt;
+    private TextView bundleLogTxt;
+    private BroadcastReceiver bundleLogReceiver;
+    private Button renewBundleManualBtn;
+    private Button saveBundleConfigBtn;
     private static final int SCAN_QR_REQUEST_CODE = 49374;
     private static final int PERMISSION_REQUEST_CODE = 0;
     private static final long SMS_DELAY_SAVE_DEBOUNCE_MS = 3000L;
@@ -92,6 +103,65 @@ public class MainActivity extends AppCompatActivity {
         checkUpdatesBtn = findViewById(R.id.checkUpdatesBtn);
         configureFilterBtn = findViewById(R.id.configureFilterBtn);
         smsSendDelayEditText = findViewById(R.id.smsSendDelayEditText);
+
+        bundleEnabledSwitch = findViewById(R.id.bundleEnabledSwitch);
+        bundleCapacityEditText = findViewById(R.id.bundleCapacityEditText);
+        bundleUssdCodeEditText = findViewById(R.id.bundleUssdCodeEditText);
+        bundleRemainingTxt = findViewById(R.id.bundleRemainingTxt);
+        renewBundleManualBtn = findViewById(R.id.renewBundleManualBtn);
+
+        bundleEnabledSwitch.setChecked(BundleManager.isBundleEnabled(mContext));
+        int savedCapacity = SharedPreferenceHelper.getSharedPreferenceInt(mContext, AppConstants.SHARED_PREFS_BUNDLE_CAPACITY_KEY, 0);
+        String savedUssd = SharedPreferenceHelper.getSharedPreferenceString(mContext, AppConstants.SHARED_PREFS_BUNDLE_USSD_CODE_KEY, "");
+        if (savedCapacity > 0) bundleCapacityEditText.setText(String.valueOf(savedCapacity));
+        if (!savedUssd.isEmpty()) bundleUssdCodeEditText.setText(savedUssd);
+        updateBundleDisplay();
+
+        saveBundleConfigBtn = findViewById(R.id.saveBundleConfigBtn);
+
+        saveBundleConfigBtn.setOnClickListener(v -> {
+            String cap = bundleCapacityEditText.getText().toString().trim();
+            String ussd = bundleUssdCodeEditText.getText().toString().trim();
+            if (!cap.isEmpty()) {
+                SharedPreferenceHelper.setSharedPreferenceInt(mContext,
+                    AppConstants.SHARED_PREFS_BUNDLE_CAPACITY_KEY,
+                    Integer.parseInt(cap));
+            }
+            if (!ussd.isEmpty()) {
+                SharedPreferenceHelper.setSharedPreferenceString(mContext,
+                    AppConstants.SHARED_PREFS_BUNDLE_USSD_CODE_KEY, ussd);
+            }
+            Toast.makeText(mContext,
+                "Configuration sauvegardée: " + ussd + " / " + cap + " SMS",
+                Toast.LENGTH_LONG).show();
+        });
+
+        bundleLogTxt = findViewById(R.id.bundleLogTxt);
+        bundleLogTxt.setText(BundleManager.getLastLog());
+
+        bundleLogReceiver = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                String msg = intent.getStringExtra("message");
+                if (msg != null) {
+                    bundleLogTxt.setText(msg);
+                    updateBundleDisplay();
+                }
+            }
+        };
+
+        bundleEnabledSwitch.setOnCheckedChangeListener((btn, checked) ->
+            SharedPreferenceHelper.setSharedPreferenceBoolean(mContext, AppConstants.SHARED_PREFS_BUNDLE_ENABLED_KEY, checked));
+
+        renewBundleManualBtn.setOnClickListener(v -> {
+            String cap = bundleCapacityEditText.getText().toString().trim();
+            String ussd = bundleUssdCodeEditText.getText().toString().trim();
+            if (!cap.isEmpty()) SharedPreferenceHelper.setSharedPreferenceInt(mContext, AppConstants.SHARED_PREFS_BUNDLE_CAPACITY_KEY, Integer.parseInt(cap));
+            if (!ussd.isEmpty()) SharedPreferenceHelper.setSharedPreferenceString(mContext, AppConstants.SHARED_PREFS_BUNDLE_USSD_CODE_KEY, ussd);
+            BundleManager.renewBundle(mContext);
+            updateBundleDisplay();
+            Toast.makeText(mContext, "Bundle rechargé", Toast.LENGTH_SHORT).show();
+        });
 
         deviceIdTxt.setText(deviceId);
         deviceIdEditText.setText(deviceId);
@@ -782,6 +852,28 @@ public class MainActivity extends AppCompatActivity {
                 handleUpdateDevice();
             }
         }
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        IntentFilter filter = new IntentFilter("com.vernu.sms.BUNDLE_LOG");
+        registerReceiver(bundleLogReceiver, filter);
+        if (bundleLogTxt != null) {
+            bundleLogTxt.setText(BundleManager.getLastLog());
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        if (bundleLogReceiver != null) {
+            unregisterReceiver(bundleLogReceiver);
+        }
+    }
+
+    private void updateBundleDisplay() {
+        bundleRemainingTxt.setText("Bundle restant: " + BundleManager.getRemaining(mContext) + " SMS");
     }
 
 }

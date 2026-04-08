@@ -8,7 +8,8 @@ public class AppConstants {
             Manifest.permission.SEND_SMS,
             Manifest.permission.READ_SMS,
             Manifest.permission.RECEIVE_SMS,
-            Manifest.permission.READ_PHONE_STATE
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.CALL_PHONE
     };
     public static final String SHARED_PREFS_DEVICE_ID_KEY = "DEVICE_ID";
     public static final String SHARED_PREFS_API_KEY_KEY = "API_KEY";
@@ -27,4 +28,9 @@ public class AppConstants {
     public static final String SHARED_PREFS_SMS_SEND_DELAY_SECONDS_KEY = "SMS_SEND_DELAY_SECONDS";
     /** Default delay between SMS sends (seconds). 5s helps avoid carrier/device throttling. */
     public static final int DEFAULT_SMS_SEND_DELAY_SECONDS = 5;
+    public static final String SHARED_PREFS_BUNDLE_ENABLED_KEY = "BUNDLE_ENABLED";
+    public static final String SHARED_PREFS_BUNDLE_REMAINING_KEY = "BUNDLE_REMAINING";
+    public static final String SHARED_PREFS_BUNDLE_CAPACITY_KEY = "BUNDLE_CAPACITY";
+    public static final String SHARED_PREFS_BUNDLE_USSD_CODE_KEY = "BUNDLE_USSD_CODE";
+    public static final String SHARED_PREFS_BUNDLE_IS_SUBSCRIBING_KEY = "BUNDLE_IS_SUBSCRIBING";
 }

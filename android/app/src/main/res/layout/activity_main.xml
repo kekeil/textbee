@@ -796,6 +796,64 @@
                     </LinearLayout>
                 </LinearLayout>
             </androidx.cardview.widget.CardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Gestion Bundle SMS"
+                android:textStyle="bold"
+                android:layout_marginTop="16dp"/>
+
+            <androidx.appcompat.widget.SwitchCompat
+                android:id="@+id/bundleEnabledSwitch"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Activer gestion bundle"/>
+
+            <EditText
+                android:id="@+id/bundleCapacityEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Taille du bundle (ex: 100)"
+                android:inputType="number"/>
+
+            <EditText
+                android:id="@+id/bundleUssdCodeEditText"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="Code USSD (ex: *144*1*1#)"
+                android:inputType="text"/>
+
+            <TextView
+                android:id="@+id/bundleRemainingTxt"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Bundle restant: --"/>
+
+            <Button
+                android:id="@+id/saveBundleConfigBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Enregistrer configuration"
+                android:backgroundTint="#2196F3"/>
+
+            <Button
+                android:id="@+id/renewBundleManualBtn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Recharger manuellement"/>
+
+            <TextView
+                android:id="@+id/bundleLogTxt"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Log USSD: --"
+                android:textSize="12sp"
+                android:textColor="#CC0000"
+                android:fontFamily="monospace"
+                android:layout_marginTop="8dp"
+                android:padding="8dp"
+                android:background="#FFF3F3"/>
         </LinearLayout>
     </ScrollView>
 </RelativeLayout>

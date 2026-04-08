@@ -1,6 +1,7 @@
 package com.vernu.sms.workers;
 
 import android.content.Context;
+import android.content.Intent;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
@@ -13,6 +14,7 @@ import androidx.work.WorkerParameters;
 
 import com.vernu.sms.AppConstants;
 import com.vernu.sms.TextBeeUtils;
+import com.vernu.sms.helpers.BundleManager;
 import com.vernu.sms.helpers.SMSHelper;
 import com.vernu.sms.helpers.SharedPreferenceHelper;
 
@@ -46,6 +48,35 @@ public class SmsSendWorker extends Worker {
 
         Context context = getApplicationContext();
 
+        // BUNDLE CHECK
+        if (BundleManager.isBundleEnabled(context)) {
+            int remaining = BundleManager.getRemaining(context);
+            sendLog(context, "WORKER: bundle activé, remaining=" + remaining);
+            if (!BundleManager.hasCredit(context)) {
+                if (!BundleManager.isSubscribing(context)) {
+                    BundleManager.setSubscribing(context, true);
+                    sendLog(context, "WORKER: lancement USSD...");
+                    BundleManager.subscribeUssd(context);
+                } else {
+                    sendLog(context, "WORKER: USSD déjà en cours, attente...");
+                }
+                int waited = 0;
+                while (!BundleManager.hasCredit(context) && waited < 60_000) {
+                    try { Thread.sleep(5_000); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
+                    waited += 5_000;
+                    sendLog(context, "WORKER: attente " + waited/1000 + "s, remaining=" + BundleManager.getRemaining(context));
+                }
+                if (!BundleManager.hasCredit(context)) {
+                    sendLog(context, "WORKER: timeout 60s dépassé, envoi sans bundle");
+                } else {
+                    sendLog(context, "WORKER: bundle rechargé, envoi du SMS");
+                }
+            } else {
+                sendLog(context, "WORKER: bundle OK remaining=" + remaining + ", envoi direct");
+            }
+        }
+        // FIN BUNDLE CHECK
+
         // Resolve SIM: backend-provided > app preference > device default
         Integer resolvedSim = resolveSim(context, simSubscriptionId);
 
@@ -53,6 +84,10 @@ public class SmsSendWorker extends Worker {
             SMSHelper.sendSMSFromSpecificSim(phone, message, resolvedSim, smsId, smsBatchId, context);
         } else {
             SMSHelper.sendSMS(phone, message, smsId, smsBatchId, context);
+        }
+
+        if (BundleManager.isBundleEnabled(context)) {
+            BundleManager.decrement(context);
         }
 
         // Enforce rate limit delay
@@ -69,6 +104,13 @@ public class SmsSendWorker extends Worker {
         }
 
         return Result.success();
+    }
+
+    private void sendLog(Context context, String message) {
+        android.util.Log.d("SmsSendWorker", message);
+        Intent intent = new Intent("com.vernu.sms.BUNDLE_LOG");
+        intent.putExtra("message", message);
+        context.sendBroadcast(intent);
     }
 
     private Integer resolveSim(Context context, int backendSimId) {
